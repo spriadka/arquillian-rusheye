@@ -11,7 +11,7 @@
 	<repositories>
 		<repository>
 			<id>jbossqa-repo</id>
-			<url>http://nexus.qa.jboss.com:8081/nexus/content/groups/public-all</url>
+			<url>http://repository.jboss.org/nexus/content/groups/public</url>
 			<releases>
 				<enabled>true</enabled>
 			</releases>
@@ -23,7 +23,7 @@
 	<pluginRepositories>
 		<pluginRepository>
 			<id>jbossqa-repo</id>
-			<url>http://nexus.qa.jboss.com:8081/nexus/content/groups/public-all</url>
+			<url>http://repository.jboss.org/nexus/content/groups/public</url>
 			<releases>
 				<enabled>true</enabled>
 			</releases>
