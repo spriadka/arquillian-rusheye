@@ -1,23 +1,22 @@
 /**
- * JBoss, Home of Professional Open Source
- * Copyright ${year}, Red Hat, Inc. and individual contributors
- * by the @authors tag. See the copyright.txt in the distribution for a
- * full listing of individual contributors.
+ * JBoss, Home of Professional Open Source Copyright ${year}, Red Hat, Inc. and
+ * individual contributors by the @authors tag. See the copyright.txt in the
+ * distribution for a full listing of individual contributors.
  *
- * This is free software; you can redistribute it and/or modify it
- * under the terms of the GNU Lesser General Public License as
- * published by the Free Software Foundation; either version 2.1 of
- * the License, or (at your option) any later version.
+ * This is free software; you can redistribute it and/or modify it under the
+ * terms of the GNU Lesser General Public License as published by the Free
+ * Software Foundation; either version 2.1 of the License, or (at your option)
+ * any later version.
  *
- * This software is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
- * Lesser General Public License for more details.
+ * This software is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more
+ * details.
  *
- * You should have received a copy of the GNU Lesser General Public
- * License along with this software; if not, write to the Free
- * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
- * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this software; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA, or see the FSF
+ * site: http://www.fsf.org.
  */
 package org.jboss.rusheye.parser.listener;
 
@@ -43,6 +42,7 @@ import org.jboss.rusheye.suite.VisualSuite;
  * @version $Revision$
  */
 public class CompareListener implements SuiteListener {
+
     Properties properties = new Properties();
     ImageComparator imageComparator = new DefaultImageComparator();
     VisualSuite visualSuite;
@@ -85,26 +85,37 @@ public class CompareListener implements SuiteListener {
     public void onTestReady(Test test) {
         resultCollector.onTestReady(test);
         resultCollector.onTestStarted(test);
-
         resultCollector.onSampleStarted(test);
-        
+
         Sample sample = test.getSample();
         sample.include(properties);
-        BufferedImage sampleImage = getSampleImage(sample);
-        
+        BufferedImage sampleImage = null;
+
+        try {
+            sampleImage = getSampleImage(sample);
+        } catch (IllegalStateException e) {
+            //Intentionally blank
+        }
+
         for (Mask mask : test.getMasks()) {
             mask.include(properties);
         }
-        
+
         resultCollector.onSampleLoaded(test);
 
         for (Pattern pattern : test.getPatterns()) {
+            if (pattern.getName().contains("failed") || sampleImage == null) {
+                resultCollector.onPatternLoaded(test, pattern);
+                resultCollector.onPatternCompleted(test, pattern, null);
+                continue;
+            }
+
             BufferedImage patternImage = getPatternImage(pattern);
             resultCollector.onPatternLoaded(test, pattern);
-
             ComparisonResult comparisonResult = imageComparator.compare(patternImage, sampleImage,
-                test.getPerception(), test.getSelectiveAlphaMasks());
+                    test.getPerception(), test.getSelectiveAlphaMasks());
             resultCollector.onPatternCompleted(test, pattern, comparisonResult);
+
         }
         resultCollector.onTestCompleted(test);
     }

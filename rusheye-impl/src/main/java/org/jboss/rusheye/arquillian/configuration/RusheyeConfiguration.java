@@ -31,6 +31,7 @@ public class RusheyeConfiguration extends Configuration<RusheyeConfiguration> {
     private String resultOutputFile = "result.xml";
 
     private String diffsDir = "diffs";
+    
 
     public boolean isForce() {
         return Boolean.parseBoolean(getProperty("force", force));

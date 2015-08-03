@@ -175,14 +175,15 @@ public final class Parser {
                     }
                     if (o instanceof Test) {
                         Test test = (Test) o;
-                        String testName = test.getName().substring(0, test.getName().lastIndexOf("."));
-                        if (failedTestsCollection != null && failedTestsCollection.getTests().contains(testName)
+                        //String testName = test.getName().substring(0, test.getName().lastIndexOf("."));
+                        /*if (failedTestsCollection != null && failedTestsCollection.getTests().contains(testName)
                             || visuallyUnstableCollection != null && visuallyUnstableCollection.getTests().contains(testName)) { 
                             logger.info("Comparison is not made for: " + test.getName() + ", as its functional test failed or is unstable!");
                             continue;
-                        }
+                        }*/
                         handler.getContext().setCurrentConfiguration(test);
                         handler.getContext().setCurrentTest(test);
+                        
                         for (Pattern pattern : test.getPatterns()) {
                             handler.getContext().invokeListeners().onPatternReady(test, pattern);
                         }

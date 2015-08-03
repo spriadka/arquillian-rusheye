@@ -2,6 +2,7 @@ package org.jboss.rusheye.arquillian.observer;
 
 import com.beust.jcommander.IStringConverter;
 import java.io.File;
+import org.arquillian.recorder.reporter.ReporterConfiguration;
 import org.jboss.arquillian.core.api.Event;
 import org.jboss.arquillian.core.api.Instance;
 import org.jboss.arquillian.core.api.annotation.Inject;
@@ -22,6 +23,9 @@ public class ParseObserver {
 
     @Inject
     private Instance<RusheyeConfiguration> rusheyeConfiguration;
+    
+    @Inject
+    private Instance<ReporterConfiguration> reporterConfiguration;
 
     @Inject
     private Event<ParsingDoneEvent> parsingDoneEvent;
@@ -40,21 +44,23 @@ public class ParseObserver {
             parser.registerListener(converted);
         }
 
-        File suiteDescriptor = new File(event.getPatternAndDescriptorFolder() +
-                File.separator +
-                rusheyeConfiguration.get().getSuiteDescriptor());
+        File suiteDescriptor = new File(event.getPatternAndDescriptorFolder()
+                + File.separator
+                + rusheyeConfiguration.get().getSuiteDescriptor());
         parser.parseFile(suiteDescriptor, event.getFailedTestsCollection(), event.getVisuallyUnstableCollection());
         parsingDoneEvent.fire(new ParsingDoneEvent());
     }
 
     public void initialize(StartParsingEvent event) {
         RusheyeConfiguration conf = rusheyeConfiguration.get();
+        ReporterConfiguration rconf = reporterConfiguration.get();
         properties.setProperty("result-output-file", conf.getWorkingDirectory() + File.separator + conf.getResultOutputFile());
         properties.setProperty("samples-directory", event.getSamplesFolder());
-        properties.setProperty("patterns-directory", event.getPatternAndDescriptorFolder() +
-                getRelativePatternsDir(event.getSamplesFolder()));
+        properties.setProperty("patterns-directory", event.getPatternAndDescriptorFolder()
+                + getRelativePatternsDir(event.getSamplesFolder()));
         properties.setProperty("file-storage-directory", conf.getWorkingDirectory() + File.separator + conf.getDiffsDir());
         properties.setProperty("masks-directory", conf.getMaskBase());
+        properties.setProperty("report-file", rconf.getFile());
     }
 
     private String getRelativePatternsDir(String samplesDir) {

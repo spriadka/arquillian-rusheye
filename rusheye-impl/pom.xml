@@ -165,5 +165,11 @@
             <artifactId>jcommander</artifactId>
             <version>1.7</version>
         </dependency>
+        <dependency>
+            <groupId>org.arquillian.extension</groupId>
+            <artifactId>arquillian-recorder-reporter-api</artifactId>
+            <version>1.0.0.Beta1</version>
+            <type>jar</type>
+        </dependency>
     </dependencies>
 </project>

@@ -100,7 +100,7 @@
 						<basedir>${basedir}</basedir>
 						<header>rusheye-licences/license-header.txt</header>
 						<quiet>false</quiet>
-						<failIfMissing>true</failIfMissing>
+						<failIfMissing>false</failIfMissing>
 						<strictCheck>true</strictCheck>
 						<aggregate>false</aggregate>
 						<includes>

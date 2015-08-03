@@ -179,6 +179,8 @@ public class CrawlObserver {
 
     private void addTests(File dir, Element root, StartCrawlinglEvent event) {
         if (dir.exists() && dir.isDirectory()) {
+            System.out.println("JUHUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUU");
+            System.out.println(dir.getAbsolutePath());
             tests:
             for (File testFile : dir.listFiles()) {
                 for (MaskType mask : MaskType.values()) {
@@ -204,7 +206,8 @@ public class CrawlObserver {
     }
 
     /**
-     * Adds recursively all screenshots. It presumes that screenshots are under following directory structure:
+     * Adds recursively all screenshots. It presumes that screenshots are under
+     * following directory structure:
      * [PatternBase]/[TestClassName]/[testMethodName]/nameOfScreenshot.[extension]
      *
      * @param dir
@@ -212,17 +215,20 @@ public class CrawlObserver {
      */
     private void recursiveFindTestName(File dir, Element root, StartCrawlinglEvent event) {
         for (File testFile : dir.listFiles()) {
+
             if (testFile.isFile()) {
 
                 String patterName = substringBeforeLast(testFile.getName(), ".");
                 String testName = testFile.getParentFile().getParentFile().getName()
                         + "." + testFile.getParentFile().getName() + "." + patterName;
-                String testNameWithoutScreenshot = testName.substring(0, testName.lastIndexOf("."));
-                if (event.getFailedTestsCollection().getTests().contains(testNameWithoutScreenshot)
+                //String testNameWithoutScreenshot = testName.substring(0, testName.lastIndexOf("."));
+                /*if (event.getFailedTestsCollection().getTests().contains(testNameWithoutScreenshot)
                         || event.getVisuallyUnstableCollection().getTests().contains(testNameWithoutScreenshot)) {
-                    //THE TEST HAS FAILED OR IS UNSTABLE, SKIP IT
+
+                    
+                    
                     continue;
-                }
+                }*/
 
                 Element test = root.addElement(QName.get("test", ns));
 
@@ -236,7 +242,9 @@ public class CrawlObserver {
             } else if (testFile.isDirectory()) {
                 recursiveFindTestName(testFile, root, event);
             }
+
         }
+
     }
 
     private void addPatterns(File dir, Element test, StartCrawlinglEvent event) {

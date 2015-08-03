@@ -46,6 +46,11 @@ public class ResultEvaluator {
      * @return the simple conclusion of comparison process
      */
     public ResultConclusion evaluate(Perception perception, ComparisonResult comparisonResult) {
+        
+        if (comparisonResult == null){
+            return ResultConclusion.ERROR;
+        }
+        
 
         if (comparisonResult.isEqualsImages()) {
             return ResultConclusion.SAME;

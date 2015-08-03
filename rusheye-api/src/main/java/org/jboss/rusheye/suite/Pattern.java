@@ -1,23 +1,22 @@
 /**
- * JBoss, Home of Professional Open Source
- * Copyright ${year}, Red Hat, Inc. and individual contributors
- * by the @authors tag. See the copyright.txt in the distribution for a
- * full listing of individual contributors.
+ * JBoss, Home of Professional Open Source Copyright ${year}, Red Hat, Inc. and
+ * individual contributors by the @authors tag. See the copyright.txt in the
+ * distribution for a full listing of individual contributors.
  *
- * This is free software; you can redistribute it and/or modify it
- * under the terms of the GNU Lesser General Public License as
- * published by the Free Software Foundation; either version 2.1 of
- * the License, or (at your option) any later version.
+ * This is free software; you can redistribute it and/or modify it under the
+ * terms of the GNU Lesser General Public License as published by the Free
+ * Software Foundation; either version 2.1 of the License, or (at your option)
+ * any later version.
  *
- * This software is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
- * Lesser General Public License for more details.
+ * This software is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more
+ * details.
  *
- * You should have received a copy of the GNU Lesser General Public
- * License along with this software; if not, write to the Free
- * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
- * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this software; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA, or see the FSF
+ * site: http://www.fsf.org.
  */
 package org.jboss.rusheye.suite;
 
@@ -38,7 +37,7 @@ import org.jboss.rusheye.retriever.PatternRetriever;
 
 /**
  * The pattern as input into comparison process, to be compared with sample.
- * 
+ *
  * @author <a href="mailto:lfryc@redhat.com">Lukas Fryc</a>
  * @version $Revision$
  */
@@ -46,26 +45,42 @@ import org.jboss.rusheye.retriever.PatternRetriever;
 @XmlType(name = "Pattern")
 public class Pattern extends ImageSource {
 
-    /** The name. */
+    /**
+     * The name.
+     */
     protected String name;
 
-    /** The comparison result. */
+    /**
+     * The comparison result.
+     */
     protected ComparisonResult comparisonResult;
 
-    /** The conclusion. */
+    /**
+     * The errorOutput.
+     */
+    protected String errorOutput;
+
+    /**
+     * The conclusion.
+     */
     private ResultConclusion conclusion;
 
-    /** The output. */
+    /**
+     * The output.
+     */
     private String output;
 
-    /** The pattern retriever - needs to be injected from outside to let pattern work correctly. */
+    /**
+     * The pattern retriever - needs to be injected from outside to let pattern
+     * work correctly.
+     */
     @Resource
     @XmlTransient
     private PatternRetriever patternRetriever;
 
     /**
      * Gets the name.
-     * 
+     *
      * @return the name
      */
     @XmlAttribute(required = true)
@@ -77,9 +92,8 @@ public class Pattern extends ImageSource {
 
     /**
      * Sets the name.
-     * 
-     * @param value
-     *            the new name
+     *
+     * @param value the new name
      */
     public void setName(String value) {
         this.name = value;
@@ -87,7 +101,7 @@ public class Pattern extends ImageSource {
 
     /**
      * Gets the comparison result.
-     * 
+     *
      * @return the comparison result
      */
     @XmlElement(name = "comparison-result")
@@ -97,9 +111,8 @@ public class Pattern extends ImageSource {
 
     /**
      * Sets the comparison result.
-     * 
-     * @param comparisonResult
-     *            the new comparison result
+     *
+     * @param comparisonResult the new comparison result
      */
     public void setComparisonResult(ComparisonResult comparisonResult) {
         this.comparisonResult = comparisonResult;
@@ -107,7 +120,7 @@ public class Pattern extends ImageSource {
 
     /**
      * Gets the conclusion.
-     * 
+     *
      * @return the conclusion
      */
     @XmlAttribute(name = "result")
@@ -117,17 +130,16 @@ public class Pattern extends ImageSource {
 
     /**
      * Sets the conclusion.
-     * 
-     * @param conclusion
-     *            the new conclusion
+     *
+     * @param conclusion the new conclusion
      */
     public void setConclusion(ResultConclusion conclusion) {
         this.conclusion = conclusion;
     }
-    
+
     /**
      * Gets the output.
-     * 
+     *
      * @return the output
      */
     @XmlAttribute
@@ -137,9 +149,8 @@ public class Pattern extends ImageSource {
 
     /**
      * Sets the output.
-     * 
-     * @param output
-     *            the new output
+     *
+     * @param output the new output
      */
     public void setOutput(String output) {
         this.output = output;
@@ -153,6 +164,15 @@ public class Pattern extends ImageSource {
     @Override
     public BufferedImage retrieve() throws Exception {
         return patternRetriever.retrieve(source, this);
+    }
+
+    public void setErrorOutput(String errorOutput) {
+        this.errorOutput = errorOutput;
+    }
+
+    @XmlElement(name = "error-output")
+    public String getErrorOutput() {
+        return errorOutput;
     }
 
 }
