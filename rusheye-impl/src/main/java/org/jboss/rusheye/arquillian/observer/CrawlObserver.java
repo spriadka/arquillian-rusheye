@@ -4,6 +4,17 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.xpath.XPath;
+import javax.xml.xpath.XPathConstants;
+import javax.xml.xpath.XPathExpressionException;
+import javax.xml.xpath.XPathFactory;
 import org.apache.commons.lang.ArrayUtils;
 import org.dom4j.Document;
 import org.dom4j.DocumentHelper;
@@ -17,7 +28,7 @@ import org.jboss.arquillian.core.api.annotation.Inject;
 import org.jboss.arquillian.core.api.annotation.Observes;
 import org.jboss.rusheye.RushEye;
 import org.jboss.rusheye.arquillian.configuration.RusheyeConfiguration;
-import org.jboss.rusheye.arquillian.event.StartCrawlinglEvent;
+import org.jboss.rusheye.arquillian.event.StartCrawlingEvent;
 import org.jboss.rusheye.parser.listener.CompareListener;
 import org.jboss.rusheye.result.collector.ResultCollectorImpl;
 import org.jboss.rusheye.result.statistics.OverallStatistics;
@@ -32,8 +43,13 @@ import static org.apache.commons.lang.StringUtils.split;
 import static org.apache.commons.lang.StringUtils.substringAfter;
 import static org.apache.commons.lang.StringUtils.substringAfterLast;
 import static org.apache.commons.lang.StringUtils.substringBeforeLast;
+import org.dom4j.io.DOMReader;
 import org.jboss.arquillian.core.api.Event;
 import org.jboss.rusheye.arquillian.event.CrawlingDoneEvent;
+import org.jboss.rusheye.arquillian.event.StartParsingEvent;
+import org.jboss.rusheye.arquillian.event.StartReclawEvent;
+import org.w3c.dom.NodeList;
+import org.xml.sax.SAXException;
 
 /**
  *
@@ -50,10 +66,54 @@ public class CrawlObserver {
     private Document document;
     private Namespace ns;
 
-    public void crawl(@Observes StartCrawlinglEvent event) {
+    public void crawl(@Observes StartCrawlingEvent event) {
         document = DocumentHelper.createDocument();
         addDocumentRoot(event);
         writeDocument();
+    }
+
+    public void reCrawl(@Observes StartReclawEvent event) {
+        if (event.getSuiteDescriptor() == null) {
+            document = DocumentHelper.createDocument();
+            addDocumentRoot(event);
+            writeDocument();
+
+        } else {
+            XPathFactory xPathFactory = XPathFactory.newInstance();
+            XPath xPath = xPathFactory.newXPath();
+            org.w3c.dom.Document suiteXml = getDOMFromXMLFile(event.getSuiteDescriptor());
+            try {
+                int numberOfCrawledTests = Integer.parseInt(xPath.compile("count(/visual-suite/test)").evaluate(suiteXml));
+                int currentTests = new File(event.getSamplesFolder()).listFiles().length;
+                if (numberOfCrawledTests < currentTests) {
+                    DOMReader reader = new DOMReader();
+                    document = reader.read(suiteXml);
+                    Element root = document.getRootElement();
+                    addRemainingTest(root, event, getAlreadyCrawledTests(document));
+                    writeDocument();
+
+                }
+            } catch (XPathExpressionException ex) {
+                Logger.getLogger(CrawlObserver.class.getName()).log(Level.SEVERE, null, ex);
+            }
+        }
+
+    }
+
+    private List<String> getAlreadyCrawledTests(Document doc) {
+        List<String> result = new ArrayList<>();
+        XPathFactory xPathFactory = XPathFactory.newInstance();
+        XPath xPath = xPathFactory.newXPath();
+        try {
+            NodeList alreadyCrawledTests = (NodeList) xPath.compile("/visual-suite/test/@name").evaluate(doc, XPathConstants.NODESET);
+            for (int i = 0; i < alreadyCrawledTests.getLength(); i++) {
+                result.add(alreadyCrawledTests.item(i).getNodeValue());
+            }
+        } catch (XPathExpressionException ex) {
+            Logger.getLogger(CrawlObserver.class.getName()).log(Level.SEVERE, null, ex);
+        }
+
+        return result;
     }
 
     private void writeDocument() {
@@ -94,7 +154,27 @@ public class CrawlObserver {
         }
     }
 
-    private void addDocumentRoot(StartCrawlinglEvent event) {
+    private void addDocumentRoot(StartCrawlingEvent event) {
+        ns = Namespace.get(RushEye.NAMESPACE_VISUAL_SUITE);
+
+        Element root = document.addElement(QName.get("visual-suite", ns));
+
+        Namespace xsi = Namespace.get("xsi", "http://www.w3.org/2001/XMLSchema-instance");
+        QName schemaLocation = QName.get("schemaLocation", xsi);
+
+        root.addNamespace("", ns.getURI());
+        root.addNamespace(xsi.getPrefix(), xsi.getURI());
+        root.addAttribute(schemaLocation, ns.getURI() + " " + RushEye.SCHEMA_LOCATION_VISUAL_SUITE);
+
+        Element globalConfiguration = root.addElement(QName.get("global-configuration", ns));
+        addSuiteListener(globalConfiguration);
+        addRetrievers(globalConfiguration);
+        addPerception(globalConfiguration);
+        addMasksByType(rusheyeConfiguration.get().getMaskBase(), globalConfiguration);
+        addTests(new File(event.getSamplesFolder()), root, event);
+    }
+
+    private void addDocumentRoot(StartReclawEvent event) {
         ns = Namespace.get(RushEye.NAMESPACE_VISUAL_SUITE);
 
         Element root = document.addElement(QName.get("visual-suite", ns));
@@ -177,10 +257,8 @@ public class CrawlObserver {
         }
     }
 
-    private void addTests(File dir, Element root, StartCrawlinglEvent event) {
+    private void addTests(File dir, Element root, StartCrawlingEvent event) {
         if (dir.exists() && dir.isDirectory()) {
-            System.out.println("JUHUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUU");
-            System.out.println(dir.getAbsolutePath());
             tests:
             for (File testFile : dir.listFiles()) {
                 for (MaskType mask : MaskType.values()) {
@@ -205,15 +283,62 @@ public class CrawlObserver {
         }
     }
 
-    /**
-     * Adds recursively all screenshots. It presumes that screenshots are under
-     * following directory structure:
-     * [PatternBase]/[TestClassName]/[testMethodName]/nameOfScreenshot.[extension]
-     *
-     * @param dir
-     * @param root
-     */
-    private void recursiveFindTestName(File dir, Element root, StartCrawlinglEvent event) {
+    private void addTests(File dir, Element root, StartReclawEvent event) {
+        if (dir.exists() && dir.isDirectory()) {
+            tests:
+            for (File testFile : dir.listFiles()) {
+                for (MaskType mask : MaskType.values()) {
+                    if (testFile.getName().equals("masks-" + mask.value())) {
+                        continue tests;
+                    }
+                }
+//                if (testFile.isDirectory() && testFile.listFiles().length > 0) {
+//                    String Tname = testFile.getName();
+//
+//                    Element test = root.addElement(QName.get("test", ns));
+//                    test.addAttribute("name", name);
+//
+//                    addPatterns(testFile, test);
+//                    addMasksByType(testFile, test);
+//                }
+                if (testFile.isDirectory()) {
+                    recursiveFindTestName(testFile, root, event);
+                }
+
+            }
+        }
+    }
+
+    private void addRemainingTest(Element root, StartReclawEvent event, List<String> alreadyCrawled) {
+
+        File dir = new File(event.getSamplesFolder());
+        if (dir.exists() && dir.isDirectory()) {
+            tests:
+            for (File testFile : dir.listFiles()) {
+                for (MaskType mask : MaskType.values()) {
+                    if (testFile.getName().equals("masks-" + mask.value())) {
+                        continue tests;
+                    }
+                }
+//                if (testFile.isDirectory() && testFile.listFiles().length > 0) {
+//                    String Tname = testFile.getName();
+//
+//                    Element test = root.addElement(QName.get("test", ns));
+//                    test.addAttribute("name", name);
+//
+//                    addPatterns(testFile, test);
+//                    addMasksByType(testFile, test);
+//                }
+                if (testFile.isDirectory()) {
+                    recursiveFindRemainingTestName(testFile, root, event, alreadyCrawled);
+                }
+
+            }
+        }
+
+    }
+
+    private void recursiveFindRemainingTestName(File dir, Element root, StartReclawEvent event, List<String> alreadyCrawled) {
         for (File testFile : dir.listFiles()) {
 
             if (testFile.isFile()) {
@@ -221,14 +346,35 @@ public class CrawlObserver {
                 String patterName = substringBeforeLast(testFile.getName(), ".");
                 String testName = testFile.getParentFile().getParentFile().getName()
                         + "." + testFile.getParentFile().getName() + "." + patterName;
-                //String testNameWithoutScreenshot = testName.substring(0, testName.lastIndexOf("."));
-                /*if (event.getFailedTestsCollection().getTests().contains(testNameWithoutScreenshot)
-                        || event.getVisuallyUnstableCollection().getTests().contains(testNameWithoutScreenshot)) {
 
-                    
-                    
-                    continue;
-                }*/
+                if (!alreadyCrawled.contains(testName)) {
+
+                    Element test = root.addElement(QName.get("test", ns));
+
+                    test.addAttribute("name", testName);
+
+                    String source = getRelativePath(new File(event.getSamplesFolder()), testFile);
+
+                    Element pattern = test.addElement(QName.get("pattern", ns));
+                    pattern.addAttribute("name", testName);
+                    pattern.addAttribute("source", source);
+                }
+            } else if (testFile.isDirectory()) {
+                recursiveFindRemainingTestName(testFile, root, event, alreadyCrawled);
+            }
+
+        }
+
+    }
+
+    private void recursiveFindTestName(File dir, Element root, StartReclawEvent event) {
+        for (File testFile : dir.listFiles()) {
+
+            if (testFile.isFile()) {
+
+                String patterName = substringBeforeLast(testFile.getName(), ".");
+                String testName = testFile.getParentFile().getParentFile().getName()
+                        + "." + testFile.getParentFile().getName() + "." + patterName;
 
                 Element test = root.addElement(QName.get("test", ns));
 
@@ -247,7 +393,41 @@ public class CrawlObserver {
 
     }
 
-    private void addPatterns(File dir, Element test, StartCrawlinglEvent event) {
+    /**
+     * Adds recursively all screenshots. It presumes that screenshots are under
+     * following directory structure:
+     * [PatternBase]/[TestClassName]/[testMethodName]/nameOfScreenshot.[extension]
+     *
+     * @param dir
+     * @param root
+     */
+    private void recursiveFindTestName(File dir, Element root, StartCrawlingEvent event) {
+        for (File testFile : dir.listFiles()) {
+
+            if (testFile.isFile()) {
+
+                String patterName = substringBeforeLast(testFile.getName(), ".");
+                String testName = testFile.getParentFile().getParentFile().getName()
+                        + "." + testFile.getParentFile().getName() + "." + patterName;
+
+                Element test = root.addElement(QName.get("test", ns));
+
+                test.addAttribute("name", testName);
+
+                String source = getRelativePath(new File(event.getSamplesFolder()), testFile);
+
+                Element pattern = test.addElement(QName.get("pattern", ns));
+                pattern.addAttribute("name", testName);
+                pattern.addAttribute("source", source);
+            } else if (testFile.isDirectory()) {
+                recursiveFindTestName(testFile, root, event);
+            }
+
+        }
+
+    }
+
+    private void addPatterns(File dir, Element test, StartCrawlingEvent event) {
         if (dir.exists() && dir.isDirectory()) {
             for (File file : dir.listFiles()) {
                 if (file.isFile()) {
@@ -264,5 +444,18 @@ public class CrawlObserver {
 
     private String getRelativePath(File base, File file) {
         return substringAfter(file.getPath(), base.getPath()).replaceFirst("^/", "");
+    }
+
+    private org.w3c.dom.Document getDOMFromXMLFile(File xmlFile) {
+        org.w3c.dom.Document result = null;
+        try {
+            DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+            DocumentBuilder db;
+            db = dbf.newDocumentBuilder();
+            result = db.parse(xmlFile);
+        } catch (ParserConfigurationException | SAXException | IOException ex) {
+            Logger.getLogger(CrawlObserver.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        return result;
     }
 }
