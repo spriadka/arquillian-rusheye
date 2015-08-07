@@ -1,7 +1,8 @@
 package org.jboss.rusheye.arquillian.event;
 
 /**
- *
+ *Event fired to make Rusheye start crawling of the patterns to create suite descriptor.
+ * 
  * @author <a href="mailto:jhuska@redhat.com">Juraj Huska</a>
  */
 public class StartCrawlinglEvent {
@@ -12,9 +13,9 @@ public class StartCrawlinglEvent {
     
     private VisuallyUnstableTestsCollection visuallyUnstableCollection;
 
-    public StartCrawlinglEvent(String samplesFolder, FailedTestsCollection failedTestsCollection, 
+    public StartCrawlinglEvent(String patternsFolder, FailedTestsCollection failedTestsCollection, 
             VisuallyUnstableTestsCollection visuallyUnstableCollection) {
-        this.samplesFolder = samplesFolder;
+        this.samplesFolder = patternsFolder;
         this.failedTestsCollection = failedTestsCollection;
         this.visuallyUnstableCollection = visuallyUnstableCollection;
     }

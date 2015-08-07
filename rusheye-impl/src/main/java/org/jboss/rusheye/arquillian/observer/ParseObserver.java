@@ -2,14 +2,23 @@ package org.jboss.rusheye.arquillian.observer;
 
 import com.beust.jcommander.IStringConverter;
 import java.io.File;
-import java.nio.file.Files;
-import java.nio.file.Paths;
+import java.io.IOException;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import javax.xml.XMLConstants;
+import javax.xml.transform.Source;
+import javax.xml.transform.stream.StreamSource;
+import javax.xml.validation.Schema;
+import javax.xml.validation.SchemaFactory;
+import javax.xml.validation.Validator;
 import org.arquillian.recorder.reporter.ReporterConfiguration;
 import org.jboss.arquillian.core.api.Event;
 import org.jboss.arquillian.core.api.Instance;
 import org.jboss.arquillian.core.api.annotation.Inject;
 import org.jboss.arquillian.core.api.annotation.Observes;
-import org.jboss.arquillian.core.spi.ServiceLoader;
+import org.jboss.rusheye.RushEye;
 import org.jboss.rusheye.arquillian.configuration.RusheyeConfiguration;
 import org.jboss.rusheye.arquillian.event.InsertDescriptorAndPatternsHandlerEvent;
 import org.jboss.rusheye.arquillian.event.ParsingDoneEvent;
@@ -18,8 +27,8 @@ import org.jboss.rusheye.internal.Instantiator;
 import org.jboss.rusheye.listener.SuiteListener;
 import org.jboss.rusheye.parser.Parser;
 import org.jboss.rusheye.suite.Properties;
-import org.jboss.rusheye.arquillian.event.StartCrawlingEvent;
 import org.jboss.rusheye.arquillian.event.StartReclawEvent;
+import org.xml.sax.SAXException;
 
 /**
  *
@@ -29,23 +38,18 @@ public class ParseObserver {
 
     @Inject
     private Instance<RusheyeConfiguration> rusheyeConfiguration;
-    
+
     @Inject
     private Instance<ReporterConfiguration> reporterConfiguration;
 
     @Inject
     private Event<ParsingDoneEvent> parsingDoneEvent;
-    
-    @Inject
-    private Event<StartCrawlingEvent> startCrawlingEvent;
-    
+
     @Inject
     private Event<StartReclawEvent> startReclawEvent;
-    
+
     @Inject
     private Event<InsertDescriptorAndPatternsHandlerEvent> iEvent;
-    
-    
 
     private Properties properties = new Properties();
     private final SuiteListenerConverter suiteListenerConverter = new SuiteListenerConverter();
@@ -61,11 +65,11 @@ public class ParseObserver {
             parser.registerListener(converted);
         }
         //SUITE DESCRIPTOR EXISTS
-        
+
         File suiteDescriptor = new File(event.getPatternAndDescriptorFolder()
                 + File.separator
                 + rusheyeConfiguration.get().getSuiteDescriptor());
-        
+
         parser.parseFile(suiteDescriptor, event.getFailedTestsCollection(), event.getVisuallyUnstableCollection());
         parsingDoneEvent.fire(new ParsingDoneEvent());
     }
@@ -82,29 +86,40 @@ public class ParseObserver {
         properties.setProperty("masks-directory", conf.getMaskBase());
         properties.setProperty("report-file", rconf.getFile());
     }
-    
-    private void initializeCrawlIfNeeded(StartParsingEvent event){
+
+    private void initializeCrawlIfNeeded(StartParsingEvent event) {
         File suite = new File(event.getPatternAndDescriptorFolder() + File.separator + rusheyeConfiguration.get().getSuiteDescriptor());
-        if (suite.isFile()){
-            System.out.println("FOUND DESCRIPTOR");
+        if (suite.isFile() && isSuiteXmlValid(suite)) {
             System.out.println(suite.getAbsolutePath());
-            File suiteDescriptor = new File(event.getPatternAndDescriptorFolder()
-                + File.separator
-                + rusheyeConfiguration.get().getSuiteDescriptor());
-            startReclawEvent.fire(new StartReclawEvent(suiteDescriptor, event.getSamplesFolder(), event.getFailedTestsCollection(), event.getVisuallyUnstableCollection()));
-            
-        }
-        else {
-            System.out.println("CREATED DESCRIPTOR");
+            startReclawEvent.fire(new StartReclawEvent(suite, event.getSamplesFolder(), event.getFailedTestsCollection(), event.getVisuallyUnstableCollection()));
+            sendRequestForRetrievalDescriptionAndPatternsHandler();
+
+        } else {
             startReclawEvent.fire(new StartReclawEvent(null, event.getSamplesFolder(), event.getFailedTestsCollection(), event.getVisuallyUnstableCollection()));
             sendRequestForRetrievalDescriptionAndPatternsHandler();
-            
+
         }
-        
-        
+
     }
     
-    private void sendRequestForRetrievalDescriptionAndPatternsHandler(){
+    private boolean isSuiteXmlValid(File suite){
+        try {
+            URL schema = new URL(RushEye.SCHEMA_LOCATION_VISUAL_SUITE);
+            Source suiteXml = new StreamSource(suite);
+            SchemaFactory schemaFactory = SchemaFactory.newInstance(XMLConstants.W3C_XML_SCHEMA_NS_URI);
+            Schema s = schemaFactory.newSchema(schema);
+            Validator validator = s.newValidator();
+            validator.validate(suiteXml);
+            return true;
+        } catch (MalformedURLException | SAXException  ex) {
+            return false;
+        } catch (IOException ex) {
+            return false;
+        }
+    }
+    
+
+    private void sendRequestForRetrievalDescriptionAndPatternsHandler() {
         iEvent.fire(new InsertDescriptorAndPatternsHandlerEvent());
     }
 

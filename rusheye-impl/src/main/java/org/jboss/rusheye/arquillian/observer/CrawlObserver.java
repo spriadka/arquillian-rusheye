@@ -43,10 +43,11 @@ import static org.apache.commons.lang.StringUtils.split;
 import static org.apache.commons.lang.StringUtils.substringAfter;
 import static org.apache.commons.lang.StringUtils.substringAfterLast;
 import static org.apache.commons.lang.StringUtils.substringBeforeLast;
-import org.dom4j.io.DOMReader;
+import org.dom4j.DocumentException;
+import org.dom4j.io.SAXReader;
 import org.jboss.arquillian.core.api.Event;
 import org.jboss.rusheye.arquillian.event.CrawlingDoneEvent;
-import org.jboss.rusheye.arquillian.event.StartParsingEvent;
+import org.jboss.rusheye.arquillian.event.StartCrawlMissingTestsEvent;
 import org.jboss.rusheye.arquillian.event.StartReclawEvent;
 import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
@@ -62,9 +63,14 @@ public class CrawlObserver {
 
     @Inject
     private Event<CrawlingDoneEvent> crawlingDoneEvent;
+    
+    @Inject
+    private Event<StartCrawlMissingTestsEvent> startCrawlMissingEvent;
 
     private Document document;
     private Namespace ns;
+    
+    private List<String> newTests = new ArrayList<>();
 
     public void crawl(@Observes StartCrawlingEvent event) {
         document = DocumentHelper.createDocument();
@@ -84,23 +90,39 @@ public class CrawlObserver {
             org.w3c.dom.Document suiteXml = getDOMFromXMLFile(event.getSuiteDescriptor());
             try {
                 int numberOfCrawledTests = Integer.parseInt(xPath.compile("count(/visual-suite/test)").evaluate(suiteXml));
-                int currentTests = new File(event.getSamplesFolder()).listFiles().length;
+                System.out.println("CRAWLED: " + numberOfCrawledTests);
+                System.out.println(event.getSamplesFolder());
+                int currentTests = getNumberOfCurrentTestsRecursive(new File(event.getSamplesFolder()));
+                System.out.println("CURRENT: " + currentTests);
                 if (numberOfCrawledTests < currentTests) {
-                    DOMReader reader = new DOMReader();
-                    document = reader.read(suiteXml);
+                    SAXReader reader = new SAXReader();
+                    document = reader.read(event.getSuiteDescriptor());
                     Element root = document.getRootElement();
-                    addRemainingTest(root, event, getAlreadyCrawledTests(document));
-                    writeDocument();
-
+                    addRemainingTest(root, event, getAlreadyCrawledTests(suiteXml));
+                    writeMissingTestsToDocument();
                 }
-            } catch (XPathExpressionException ex) {
+            } catch (XPathExpressionException | DocumentException ex) {
                 Logger.getLogger(CrawlObserver.class.getName()).log(Level.SEVERE, null, ex);
             }
         }
 
     }
+    
+    private int getNumberOfCurrentTestsRecursive(File file){
+        int result = 0;
+        if (file.isFile()){
+            result += 1;
+        }
+        else {
+            for (File f : file.listFiles()){
+                result += getNumberOfCurrentTestsRecursive(f);
+            }
+        }
+        return result;
+    }
+    
 
-    private List<String> getAlreadyCrawledTests(Document doc) {
+    private List<String> getAlreadyCrawledTests(org.w3c.dom.Document doc) {
         List<String> result = new ArrayList<>();
         XPathFactory xPathFactory = XPathFactory.newInstance();
         XPath xPath = xPathFactory.newXPath();
@@ -138,6 +160,30 @@ public class CrawlObserver {
             }
         }
     }
+    
+    private void writeMissingTestsToDocument() {
+        OutputFormat format = OutputFormat.createPrettyPrint();
+        OutputStream out = openOutputStream();
+        XMLWriter writer = null;
+
+        try {
+            writer = new XMLWriter(out, format);
+            writer.write(document);
+            writer.flush();
+            startCrawlMissingEvent.fire(new StartCrawlMissingTestsEvent(newTests));
+        } catch (IOException e) {
+            PrintErrorUtils.printErrorMessage(e);
+            System.exit(7);
+        } finally {
+            try {
+                writer.close();
+            } catch (IOException ex) {
+                PrintErrorUtils.printErrorMessage(ex);
+                System.exit(7);
+            }
+        }
+    }
+    
 
     private OutputStream openOutputStream() {
         RusheyeConfiguration conf = rusheyeConfiguration.get();
@@ -156,7 +202,6 @@ public class CrawlObserver {
 
     private void addDocumentRoot(StartCrawlingEvent event) {
         ns = Namespace.get(RushEye.NAMESPACE_VISUAL_SUITE);
-
         Element root = document.addElement(QName.get("visual-suite", ns));
 
         Namespace xsi = Namespace.get("xsi", "http://www.w3.org/2001/XMLSchema-instance");
@@ -175,8 +220,8 @@ public class CrawlObserver {
     }
 
     private void addDocumentRoot(StartReclawEvent event) {
+        
         ns = Namespace.get(RushEye.NAMESPACE_VISUAL_SUITE);
-
         Element root = document.addElement(QName.get("visual-suite", ns));
 
         Namespace xsi = Namespace.get("xsi", "http://www.w3.org/2001/XMLSchema-instance");
@@ -310,7 +355,7 @@ public class CrawlObserver {
     }
 
     private void addRemainingTest(Element root, StartReclawEvent event, List<String> alreadyCrawled) {
-
+        ns = Namespace.get(RushEye.NAMESPACE_VISUAL_SUITE);
         File dir = new File(event.getSamplesFolder());
         if (dir.exists() && dir.isDirectory()) {
             tests:
@@ -348,7 +393,7 @@ public class CrawlObserver {
                         + "." + testFile.getParentFile().getName() + "." + patterName;
 
                 if (!alreadyCrawled.contains(testName)) {
-
+                    newTests.add(testName);
                     Element test = root.addElement(QName.get("test", ns));
 
                     test.addAttribute("name", testName);
