@@ -21,6 +21,9 @@
  */
 package org.jboss.rusheye.parser;
 
+import com.google.common.base.Function;
+import com.google.common.collect.Lists;
+import java.util.List;
 import javax.xml.bind.Unmarshaller;
 
 import org.jboss.rusheye.exception.ConfigurationValidationException;
@@ -30,6 +33,7 @@ import org.jboss.rusheye.suite.Test;
 
 public class UniqueIdentityChecker extends Unmarshaller.Listener {
     private Context context;
+    private List<String> maskIdsInConfiguration = null;
 
     UniqueIdentityChecker(Context context) {
         this.context = context;
@@ -53,11 +57,20 @@ public class UniqueIdentityChecker extends Unmarshaller.Listener {
             context.getPatternNames().add(pattern.getName());
         }
         if (target instanceof Mask) {
-            Mask mask = (Mask) target;
-            if (context.getMaskIds().contains(mask.getId())) {
-                throw new ConfigurationValidationException("mask's \"id\" attribute have to be unique across suite");
+            List<String> maskIds = null;
+            if (context.getCurrentConfiguration() != null){
+                maskIds = Lists.transform(context.getCurrentConfiguration().getMasks(), new Function<Mask, String>(){
+                    @Override
+                    public String apply(Mask f) {
+                        return f.getId();
+                    }
+                });
             }
-            context.getMaskIds().add(mask.getId());
+            Mask mask = (Mask) target;
+            if (maskIds != null && !maskIds.contains(mask.getId())) {
+                throw new ConfigurationValidationException("mask's \"id\" attribute is not in global configuration");
+            }
+            //context.getMaskIds().add(mask.getId());
         }
     }
 }

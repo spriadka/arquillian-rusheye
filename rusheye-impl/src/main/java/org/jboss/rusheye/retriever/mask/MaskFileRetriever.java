@@ -26,6 +26,9 @@ import java.io.File;
 import java.io.IOException;
 
 import javax.imageio.ImageIO;
+import org.jboss.arquillian.core.api.annotation.Observes;
+import org.jboss.logging.Logger;
+import org.jboss.rusheye.arquillian.event.ReceiveMaskFromJCREvent;
 
 import org.jboss.rusheye.exception.RetrieverException;
 import org.jboss.rusheye.retriever.AbstractRetriever;
@@ -37,24 +40,32 @@ import org.jboss.rusheye.suite.Properties;
  * @version $Revision$
  */
 public class MaskFileRetriever extends AbstractRetriever implements MaskRetriever {
+    
+    private final Logger LOGGER = Logger.getLogger(MaskFileRetriever.class);
+    
+    private final String MASK = "mask";
 
     public BufferedImage retrieve(String source, Properties localProperties) throws RetrieverException {
-        Properties properties = mergeProperties(localProperties);
         
+        Properties properties = mergeProperties(localProperties);
         String baseDirectory = (String) properties.getProperty("masks-directory");
-
-        File file;
-
-        if (baseDirectory == null) {
-            file = new File(source);
-        } else {
-            file = new File(baseDirectory, source);
-        }
-
+        File file = null;
         try {
+            
+            String fileName = source.substring(source.lastIndexOf("masks/") + 6, source.lastIndexOf("/jcr:content/jcr:data"));
+            /*String maskID = MASK + fileName.substring(fileName.lastIndexOf("/") + 1);
+            String filePath = baseDirectory + File.separator + fileName.substring(0,fileName.lastIndexOf("/") + 1) + maskID;
+            System.out.println(filePath);*/
+            file = new File(baseDirectory + File.separator + fileName);
             return ImageIO.read(file);
         } catch (IOException e) {
+            LOGGER.error(file);
             throw new RetrieverException("Mask file is unreachable - " + file);
         }
+        catch(StringIndexOutOfBoundsException sioe){
+            LOGGER.error(source);
+            return null;
+        }
     }
+    
 }
