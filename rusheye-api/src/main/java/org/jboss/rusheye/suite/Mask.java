@@ -212,4 +212,9 @@ public class Mask extends ImageSource {
     public void setMaskRetriever(MaskRetriever maskRetriever) {
         this.maskRetriever = maskRetriever;
     }
+    
+    @Override
+    public String toString(){
+        return "MASK ID: " + id + ", TYPE: " + type.name();
+    }
 }

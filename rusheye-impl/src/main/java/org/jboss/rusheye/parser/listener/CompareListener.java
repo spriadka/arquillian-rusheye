@@ -86,7 +86,6 @@ public class CompareListener implements SuiteListener {
         resultCollector.onTestReady(test);
         resultCollector.onTestStarted(test);
         resultCollector.onSampleStarted(test);
-
         Sample sample = test.getSample();
         sample.include(properties);
         BufferedImage sampleImage = null;
@@ -112,6 +111,7 @@ public class CompareListener implements SuiteListener {
 
             BufferedImage patternImage = getPatternImage(pattern);
             resultCollector.onPatternLoaded(test, pattern);
+            System.out.println("MASKS IN COMPARELISTENER FOR TEST: " + test.getName() + test.getSelectiveAlphaMasks().toString());
             ComparisonResult comparisonResult = imageComparator.compare(patternImage, sampleImage,
                     test.getPerception(), test.getSelectiveAlphaMasks());
             resultCollector.onPatternCompleted(test, pattern, comparisonResult);

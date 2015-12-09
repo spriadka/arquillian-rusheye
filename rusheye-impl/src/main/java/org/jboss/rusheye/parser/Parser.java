@@ -159,7 +159,6 @@ public final class Parser {
                 try {
                     // go on the start of the next tag
                     filteredReader.nextTag();
-
                     Object o = um.unmarshal(reader);
                     if (o instanceof GlobalConfiguration) {
                         GlobalConfiguration globalConfiguration = (GlobalConfiguration) o;
@@ -183,10 +182,10 @@ public final class Parser {
                         }*/
                         handler.getContext().setCurrentConfiguration(test);
                         handler.getContext().setCurrentTest(test);
-                        
                         for (Pattern pattern : test.getPatterns()) {
                             handler.getContext().invokeListeners().onPatternReady(test, pattern);
                         }
+                        logger.info(test.getSelectiveAlphaMasks().toString());
                         Test testWrapped = ConfigurationCompiler.wrap(test, visualSuite.getGlobalConfiguration());
                         handler.getContext().invokeListeners().onTestReady(testWrapped);
                     }

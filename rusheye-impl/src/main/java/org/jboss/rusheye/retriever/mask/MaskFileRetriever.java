@@ -26,9 +26,7 @@ import java.io.File;
 import java.io.IOException;
 
 import javax.imageio.ImageIO;
-import org.jboss.arquillian.core.api.annotation.Observes;
 import org.jboss.logging.Logger;
-import org.jboss.rusheye.arquillian.event.ReceiveMaskFromJCREvent;
 
 import org.jboss.rusheye.exception.RetrieverException;
 import org.jboss.rusheye.retriever.AbstractRetriever;
@@ -45,6 +43,7 @@ public class MaskFileRetriever extends AbstractRetriever implements MaskRetrieve
     
     private final String MASK = "mask";
 
+    @Override
     public BufferedImage retrieve(String source, Properties localProperties) throws RetrieverException {
         
         Properties properties = mergeProperties(localProperties);
@@ -53,17 +52,15 @@ public class MaskFileRetriever extends AbstractRetriever implements MaskRetrieve
         try {
             
             String fileName = source.substring(source.lastIndexOf("masks/") + 6, source.lastIndexOf("/jcr:content/jcr:data"));
-            /*String maskID = MASK + fileName.substring(fileName.lastIndexOf("/") + 1);
-            String filePath = baseDirectory + File.separator + fileName.substring(0,fileName.lastIndexOf("/") + 1) + maskID;
-            System.out.println(filePath);*/
+            LOGGER.info("PROCESSING MASK: " + baseDirectory + File.separator + fileName);
             file = new File(baseDirectory + File.separator + fileName);
             return ImageIO.read(file);
         } catch (IOException e) {
-            LOGGER.error(file);
+            LOGGER.error(e);
             throw new RetrieverException("Mask file is unreachable - " + file);
         }
         catch(StringIndexOutOfBoundsException sioe){
-            LOGGER.error(source);
+            LOGGER.error(sioe);
             return null;
         }
     }

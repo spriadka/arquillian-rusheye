@@ -23,6 +23,7 @@ package org.jboss.rusheye.parser;
 
 import com.google.common.base.Function;
 import com.google.common.collect.Lists;
+import java.util.ArrayList;
 import java.util.List;
 import javax.xml.bind.Unmarshaller;
 
@@ -31,9 +32,13 @@ import org.jboss.rusheye.suite.Mask;
 import org.jboss.rusheye.suite.Pattern;
 import org.jboss.rusheye.suite.Test;
 
+import org.jboss.logging.Logger;
+import org.jboss.rusheye.suite.GlobalConfiguration;
+
 public class UniqueIdentityChecker extends Unmarshaller.Listener {
     private Context context;
-    private List<String> maskIdsInConfiguration = null;
+    private List<String> maskIdsInConfiguration = new ArrayList<>();
+    private Logger LOGGER = Logger.getLogger(UniqueIdentityChecker.class);
 
     UniqueIdentityChecker(Context context) {
         this.context = context;
@@ -56,21 +61,23 @@ public class UniqueIdentityChecker extends Unmarshaller.Listener {
             }
             context.getPatternNames().add(pattern.getName());
         }
-        if (target instanceof Mask) {
-            List<String> maskIds = null;
-            if (context.getCurrentConfiguration() != null){
-                maskIds = Lists.transform(context.getCurrentConfiguration().getMasks(), new Function<Mask, String>(){
-                    @Override
-                    public String apply(Mask f) {
-                        return f.getId();
-                    }
-                });
-            }
+        /*if (target instanceof Mask) {
+            LOGGER.info("UNMARSHALLING");
+            addMaskIds();
             Mask mask = (Mask) target;
-            if (maskIds != null && !maskIds.contains(mask.getId())) {
+            if (!maskIdsInConfiguration.contains(mask.getId())) {
                 throw new ConfigurationValidationException("mask's \"id\" attribute is not in global configuration");
             }
             //context.getMaskIds().add(mask.getId());
+        }*/
+    }
+    
+    private void addMaskIds(){
+        if (context.getCurrentConfiguration() instanceof GlobalConfiguration){
+            if (!context.getCurrentConfiguration().getMasks().isEmpty()){
+                LOGGER.info(context.getMaskIds().toArray().toString());
+                maskIdsInConfiguration.addAll(context.getMaskIds());
+            }
         }
     }
 }

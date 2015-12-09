@@ -34,6 +34,8 @@ import javax.xml.bind.annotation.XmlTransient;
 import javax.xml.bind.annotation.XmlType;
 import javax.xml.bind.annotation.adapters.CollapsedStringAdapter;
 import javax.xml.bind.annotation.adapters.XmlJavaTypeAdapter;
+import org.jboss.rusheye.suite.annotations.Nullify;
+import org.jboss.rusheye.suite.annotations.VisualSuiteResult;
 
 /**
  * The one test of visual test suite.
@@ -42,7 +44,7 @@ import javax.xml.bind.annotation.adapters.XmlJavaTypeAdapter;
  * @version $Revision$
  */
 @XmlAccessorType(XmlAccessType.PROPERTY)
-@XmlType(name = "Test", propOrder = { "patterns" })
+@XmlType(name = "Test", propOrder = {"masks","patterns" })
 @XmlRootElement(name = "test")
 public class Test extends Configuration {
 
@@ -55,6 +57,7 @@ public class Test extends Configuration {
     /** The sample. */
     @XmlTransient
     private Sample sample;
+    
 
     /**
      * Gets the patterns.
@@ -67,6 +70,16 @@ public class Test extends Configuration {
             patterns = new ArrayList<Pattern>();
         }
         return this.patterns;
+    }
+    
+    @Override
+    @XmlElement(name = "mask")
+    @Nullify(VisualSuiteResult.class)
+    public List<Mask> getMasks(){
+        if (masks == null){
+            masks = new ArrayList<>();
+        }
+        return this.masks;
     }
 
     /**

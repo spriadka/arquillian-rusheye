@@ -82,7 +82,7 @@ public abstract class Configuration {
     @Nullify(VisualSuiteResult.class)
     public List<Mask> getMasks() {
         if (masks == null) {
-            masks = new ArrayList<Mask>();
+            masks = new ArrayList<>();
         }
         return this.masks;
     }
