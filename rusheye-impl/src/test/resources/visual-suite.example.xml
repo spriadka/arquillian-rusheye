@@ -61,7 +61,7 @@
 		<pattern name="AjaxSupportTestCase.testEmpty.1" source="AjaxSupportTestCase.testEmpty.1.png" />
 		<pattern name="AjaxSupportTestCase.testEmpty.2" source="AjaxSupportTestCase.testEmpty.2.png" />
 	</test>
-
+        
 	<test name="BeanValidatorTestCase.testAgeIntegerOnly:168">
 		<perception>
 			<global-difference-pixel-amount>10px</global-difference-pixel-amount>
